@@ -1,0 +1,15 @@
+[package]
+name = "emoji-picker"
+version = "0.0.1"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+lazy_static = "1.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+json = "0.12"
+clipboard = "0.5"
+enigo = "0.0.14"
+druid = "0.7"
