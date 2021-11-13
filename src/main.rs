@@ -59,7 +59,7 @@ fn find<'a>(string: &'a str) -> (Option<String>, Vec<String>) {
     for emoji in &EMOJIS.emojis {
         if  string.eq(&emoji.shortname) {
             println!("{:#?} vs {:#?}: {:?}", string, emoji.shortname, emoji.emoji);
-            return (Some(emoji.unicode.clone()), vec![]);
+            return (Some(emoji.emoji.clone()), vec![]);
         } else if emoji.shortname.contains(string.trim_matches(':')) {
             let output: String = format!("{} {}", emoji.shortname, emoji.emoji);
             helper.push(output);
@@ -70,8 +70,9 @@ fn find<'a>(string: &'a str) -> (Option<String>, Vec<String>) {
 }
 
 fn input_unicode(unicode: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let hex: u32 = u32::from_str_radix(unicode, 16)?;
-    let output: String = char::try_from(hex)?.into();
+    // let hex: u32 = u32::from_str_radix(unicode, 16)?;
+    // let output: String = char::try_from(hex)?.into();
+    let output = unicode.to_string();
 
     let mut ctx: ClipboardContext = ClipboardProvider::new()?;
     // Fill clipboard with the emoji
@@ -80,7 +81,9 @@ fn input_unicode(unicode: &str) -> Result<(), Box<dyn std::error::Error>> {
     //thread::sleep(time::Duration::from_millis(500));
 
     let mut enigo = Enigo::new();
-    enigo.set_delay(100);
+
+    #[cfg(target_os = "linux")]
+    enigo.set_delay(500);
 
     enigo.key_down(Key::Alt);
 
@@ -92,8 +95,6 @@ fn input_unicode(unicode: &str) -> Result<(), Box<dyn std::error::Error>> {
     thread::sleep(time::Duration::from_millis(100));
 
     enigo.key_sequence_parse("{+CTRL}v{-CTRL}");
-    thread::sleep(time::Duration::from_millis(100));
-    enigo.key_sequence_parse("{+CTRL}{+SHIFT}v{-SHIFT}{-CTRL}");
 
     Ok(())
 }
@@ -109,6 +110,7 @@ const WINDOW_TITLE: LocalizedString<HelloState> = LocalizedString::new("Hello Wo
 struct HelloState {
     name: String,
     helper: [String; 5],
+    selected: u8,
 }
 
 struct UpdateCallback();
@@ -127,10 +129,22 @@ impl<W: Widget<HelloState>> Controller<HelloState, W> for UpdateCallback {
                 ctx.request_focus();
             },
             Event::KeyUp(key)  => {
-                if let druid::Code::Enter = key.code {
-                    //input_unicode(&data.name);
+                if let druid::Code::ArrowUp = key.code {
+                    if data.selected > 0 {
+                        data.selected -= 1;
+                    }
+                } else if let druid::Code::ArrowDown = key.code {
+                    if data.selected < 4 {
+                        data.selected += 1;
+                    }
                 }
                 let output = find(&data.name);
+
+                if let druid::Code::Enter = key.code {
+                    let emoji = output.1[data.selected as usize].split(' ').nth(1).expect("wrong helper format");
+                    println!("{}", emoji);
+                    input_unicode(emoji).expect("IDK");
+                }
                 if let (None, helper) = output {
                     for i in 0..=4 {
                         data.helper[i] = helper.get(i).unwrap_or(&String::from("")).to_string();
@@ -181,6 +195,7 @@ fn main() {
     let initial_state = HelloState {
         name: "".into(),
         helper: Default::default(),
+        selected: 0,
     };
 
     // start the application
