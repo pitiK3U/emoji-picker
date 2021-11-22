@@ -1,3 +1,6 @@
+// On Windows platform, don't show a console when opening the app.
+#![windows_subsystem = "windows"]
+
 // use std::fs::File;
 // use std::io::prelude::*;
 use std::convert::TryFrom;
@@ -11,7 +14,6 @@ use enigo::*;
 
 use clipboard::ClipboardProvider;
 use clipboard::ClipboardContext;
-
 
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -128,7 +130,7 @@ impl<W: Widget<HelloState>> Controller<HelloState, W> for UpdateCallback {
             Event::WindowConnected => {
                 ctx.request_focus();
             },
-            Event::KeyUp(key)  => {
+            Event::KeyDown(key) => {
                 if let druid::Code::ArrowUp = key.code {
                     if data.selected > 0 {
                         data.selected -= 1;
@@ -136,6 +138,11 @@ impl<W: Widget<HelloState>> Controller<HelloState, W> for UpdateCallback {
                 } else if let druid::Code::ArrowDown = key.code {
                     if data.selected < 4 {
                         data.selected += 1;
+                    }
+                } else if let druid::Code::Backspace = key.code {
+                    if key.mods.ctrl() {
+                        data.name = "".into();
+                        return;
                     }
                 }
                 let output = find(&data.name);
